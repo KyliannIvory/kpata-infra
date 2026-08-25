@@ -1,0 +1,4 @@
+.env.local
+.env.production
+nginx/certs/
+CLAUDE.md
