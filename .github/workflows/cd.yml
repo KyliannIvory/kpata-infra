@@ -1,0 +1,41 @@
+name: cd.yml
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: deploy stack
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: write .env
+        run: |
+          cat > .env <<EOF
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          EOF
+        shell: bash
+
+      - name: login to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: pull latest images
+        run: docker compose pull
+        shell: bash
+
+      - name: deploy
+        run: docker compose up -d --remove-orphans
+        shell: bash
+
+      - name: clean up old images
+        run: docker image prune -f
+        shell: bash

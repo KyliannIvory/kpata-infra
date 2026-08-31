@@ -1,5 +1,5 @@
 services:
-  nginx: 
+  nginx:
     image: nginx:1.31-alpine
     ports:
       - "80:80"
@@ -10,17 +10,52 @@ services:
     depends_on:
       - frontend
     networks:
-     - kpata_network
-    
+      - kpata_network
+
   frontend:
-    build: ../kpata-frontend
+    image: ghcr.io/kyliannivory/kpata-frontend:latest
     environment:
       - API_URL=http://backend:8080
+    depends_on:
+      - backend
+    networks:
+      - kpata_network
+
+  backend:
+    image: ghcr.io/kyliannivory/kpata-backend:latest
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - kpata_network
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 15s
+      retries: 5
     networks:
       - kpata_network
 
 networks:
   kpata_network:
+    name: kpata_network
     external: true
 
-
+volumes:
+  pgdata:
